@@ -1,0 +1,1003 @@
+---
+title: "標題：市場內的調查與分析&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;組員：李世澤"
+output: 
+  flexdashboard::flex_dashboard:
+    orientation: rows
+    vertical_layout: scroll
+---
+
+```{r setup, include=FALSE}
+library(rmarkdown)
+library(flexdashboard)
+library(ggplot2)
+library(readxl)
+library(kableExtra)
+```
+-----------------------------------------------------------------------
+
+# 研究一
+
+Column {data-width=300}
+-----------------------------------------------------------------------
+
+### 題目(Problem) 1. 哪一種產品最賣？？
+
+```{r}
+MostProductForSale <- function(orderdetails_data, product_data){
+  orderdetails <- read_excel(orderdetails_data)
+  products <- read_excel(product_data)
+  
+  orderdetail_new <- orderdetails[c("ProductID","Quantity")]
+  product_new <- products[c("ProductID","ProductName")]
+  
+  merge_data <- merge(orderdetail_new,product_new, by = "ProductID")
+  
+  product_sales <- aggregate(Quantity ~ ProductName, data = merge_data, sum)
+  
+  best_selling_product <- product_sales[which.max(product_sales$Quantity),"ProductName"]
+
+  result <- best_selling_product
+  
+  cat("賣最好的產品： ", paste(best_selling_product, collapse = ", "), "\n")
+  
+  return(result)
+}
+result <- MostProductForSale("C:/Users/user/Documents/Xfinal/data/Northwind/OrderDetails.xlsx", "C:/Users/user/Documents/Xfinal/data/Northwind/Products.xlsx")
+```
+
+### 解題步驟(Plan)
+
+首先要先知道資料內哪些是我們需要的數據，找到所需數據後，將它合併起來(用merge)，再運用aggregate這個r字將其數量對於同樣的商品名字加總起來，之後再用which.max這個r字找到最大的統計量的該名稱是誰。
+
+
+Column {data-width=300}
+-----------------------------------------------------------------------
+
+### 準備數據(Data)
+
+```{r}
+library(DT)
+
+MostProductForSale <- function(orderdetails_data, product_data){
+  orderdetails <- read_excel(orderdetails_data)
+  products <- read_excel(product_data)
+  
+  orderdetail_new <- orderdetails[c("ProductID","Quantity")]
+  product_new <- products[c("ProductID","ProductName")]
+  
+  merge_data <- merge(orderdetail_new,product_new, by = "ProductID")
+  
+  return(merge_data)
+}
+  result <- MostProductForSale("C:/Users/user/Documents/Xfinal/data/Northwind/OrderDetails.xlsx", "C:/Users/user/Documents/Xfinal/data/Northwind/Products.xlsx")
+  
+  datatable(result)
+```
+
+Column {data-width=300}
+-----------------------------------------------------------------------
+
+### 商品對應銷售量的長條圖
+
+```{r}
+MostProductForSale <- function(orderdetails_data, product_data){
+  orderdetails <- read_excel(orderdetails_data)
+  products <- read_excel(product_data)
+  
+  orderdetail_new <- orderdetails[c("ProductID","Quantity")]
+  product_new <- products[c("ProductID","ProductName")]
+  
+  merge_data <- merge(orderdetail_new,product_new, by = "ProductID")
+  
+  product_sales <- aggregate(Quantity ~ ProductName, data = merge_data, sum)  # 以產品名稱聚合總銷售量
+  top_products <- head(product_sales[order(product_sales$Quantity, decreasing = TRUE), ], 5)  # 取前五名商品
+  
+  library(ggplot2)
+
+  plot <- ggplot(top_products, aes(x = reorder(ProductName, Quantity), y = Quantity)) +
+    geom_bar(stat = "identity", fill = "skyblue") +
+    labs(x = "產品名稱", y = "總銷售量", title = "前五名產品總銷售分佈") +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1)) 
+  
+  return(plot)
+}
+
+result <- MostProductForSale("C:/Users/user/Documents/Xfinal/data/Northwind/OrderDetails.xlsx", "C:/Users/user/Documents/Xfinal/data/Northwind/Products.xlsx")
+
+result
+```
+
+Column {data-width=300}
+-----------------------------------------------------------------------
+
+### 解題報告(Analysis)
+
+哪一種產品最賣？我們先從資料集中找到我們所需的欄位，再將數量給予產品名稱的限制，就可求出該商品名稱了，而從上面的長條圖也可看出，賣最好的產品：  Gorgonzola Telino 
+
+Column {data-width=300}
+-----------------------------------------------------------------------
+
+### 題目(Problem) 2. 這一種產品哪幾年最賣？？
+
+```{r}
+MostAmountForYear <- function(orderdetails_data, product_data, order_data){
+  orderdetails <- read_excel(orderdetails_data)
+  products <- read_excel(product_data)
+  order <- read_excel(order_data)
+  
+  orderdetail_new <- orderdetails[c("OrderID","ProductID","Quantity")]
+  product_new <- products[c("ProductID","ProductName")]
+  order_new <- order[c("OrderID","OrderDate")]
+  
+  merged_data_1 <- merge(orderdetail_new, product_new, by = "ProductID")
+  merged_data_2 <- merge(merged_data_1, order_new, by = "OrderID")
+  
+  product_sales <- aggregate(Quantity ~ ProductName, data = merged_data_2, sum)
+  
+  best_selling_product <- product_sales[which.max(product_sales$Quantity), "ProductName"]
+  
+  product_data <- merged_data_2[merged_data_2$ProductName == best_selling_product, ]
+  
+  product_data$Year <- as.integer(format(product_data$OrderDate, "%Y"))
+  
+  yearly_sales <- aggregate(Quantity ~ Year, data = product_data, sum)
+  
+  best_selling_year <- yearly_sales[which.max(yearly_sales$Quantity), "Year"]
+  
+  cat("該商品賣最好的年份： ", paste(best_selling_year, collapse = ", "), "\n")
+  
+  return(best_selling_year)
+}
+result <- MostAmountForYear("C:/Users/user/Documents/Xfinal/data/Northwind/OrderDetails.xlsx", "C:/Users/user/Documents/Xfinal/data/Northwind/Products.xlsx","C:/Users/user/Documents/Xfinal/data/Northwind/Orders.xlsx")
+```
+
+### 解題步驟(Plan)
+
+問題一中，我們已經找出該商品名稱，再來就把該商品的資料從資料庫裡面抓出來，之後再把抓出來的資料找出我們想知道的欄位(年份)，再用which.max這個r字找出賣最好的年份。
+
+
+Column {data-width=300}
+-----------------------------------------------------------------------
+
+### 準備數據(Data)
+
+```{r}
+library(DT)
+
+MostAmountForYear <- function(orderdetails_data, product_data, order_data){
+  orderdetails <- read_excel(orderdetails_data)
+  products <- read_excel(product_data)
+  order <- read_excel(order_data)
+  
+  orderdetail_new <- orderdetails[c("OrderID","ProductID","Quantity")]
+  product_new <- products[c("ProductID","ProductName")]
+  order_new <- order[c("OrderID","OrderDate")]
+  
+  merged_data_1 <- merge(orderdetail_new, product_new, by = "ProductID")
+  merged_data_2 <- merge(merged_data_1, order_new, by = "OrderID")
+  
+  product_sales <- aggregate(Quantity ~ ProductName, data = merged_data_2, sum)
+  
+  best_selling_product <- product_sales[which.max(product_sales$Quantity), "ProductName"]
+  
+  product_data <- merged_data_2[merged_data_2$ProductName == best_selling_product, ]
+  
+  return(product_data)
+}
+result <- MostAmountForYear("C:/Users/user/Documents/Xfinal/data/Northwind/OrderDetails.xlsx", "C:/Users/user/Documents/Xfinal/data/Northwind/Products.xlsx","C:/Users/user/Documents/Xfinal/data/Northwind/Orders.xlsx")
+  datatable(result)
+```
+
+### 該商品總銷售量和年份的長條圖
+
+```{r}
+MostAmountForYear <- function(orderdetails_data, product_data, order_data){
+  orderdetails <- read_excel(orderdetails_data)
+  products <- read_excel(product_data)
+  order <- read_excel(order_data)
+  
+  orderdetail_new <- orderdetails[c("OrderID","ProductID","Quantity")]
+  product_new <- products[c("ProductID","ProductName")]
+  order_new <- order[c("OrderID","OrderDate")]
+  
+  merged_data_1 <- merge(orderdetail_new, product_new, by = "ProductID")
+  merged_data_2 <- merge(merged_data_1, order_new, by = "OrderID")
+  
+  product_sales <- aggregate(Quantity ~ ProductName, data = merged_data_2, sum)
+  
+  best_selling_product <- product_sales[which.max(product_sales$Quantity), "ProductName"]
+  
+  product_data <- merged_data_2[merged_data_2$ProductName == best_selling_product, ]
+  
+  product_data$Year <- as.integer(format(product_data$OrderDate, "%Y"))
+  
+  yearly_sales <- aggregate(Quantity ~ Year, data = product_data, sum)
+
+  library(ggplot2)
+
+  plot <- ggplot(yearly_sales, aes(x = Year, y = Quantity)) +
+    geom_bar(stat = "identity", fill = "red") +
+    labs(x = "年份", y = "該商品總銷售量", title = "產品總銷售分佈") +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1)) 
+  
+  return(plot)
+}
+
+result <- MostAmountForYear("C:/Users/user/Documents/Xfinal/data/Northwind/OrderDetails.xlsx", "C:/Users/user/Documents/Xfinal/data/Northwind/Products.xlsx","C:/Users/user/Documents/Xfinal/data/Northwind/Orders.xlsx")
+
+result  
+```
+
+Column {data-width=300}
+-----------------------------------------------------------------------
+
+### 解題報告(Analysis)
+
+這一種產品哪幾年最賣？我們先從資料集中找到我們所需的欄位，再將問題一中所找出的該商品資料集中起來，再去把數量依年份加總起來，就可求出該商品在哪一年銷售最好，而從上面的長條圖也可看出，該商品賣最好的年份：  1996 
+
+Column {data-width=300}
+-----------------------------------------------------------------------
+
+### 題目(Problem) 3. 這一種產品曾經賣給哪幾個國家？？
+
+```{r}
+CountriesWhereProductSold <- function(orderdetails_data, product_data, order_data, customers_data) {
+  
+  orderdetails <- read_excel(orderdetails_data)
+  products <- read_excel(product_data)
+  order <- read_excel(order_data)
+  customers <- read_excel(customers_data)
+  
+  orderdetail_new <- orderdetails[c("OrderID","ProductID","Quantity")]
+  product_new <- products[c("ProductID","ProductName")]
+  order_new <- order[c("OrderID","CustomerID")]
+  customers_new <- customers[c("CustomerID","Country","CustomerName")]
+  
+  merged_data_1 <- merge(orderdetail_new, product_new, by = "ProductID")
+  merged_data_2 <- merge(order_new, customers_new, by = "CustomerID")
+  merged_data_3 <- merge(merged_data_1, merged_data_2, by = "OrderID")
+  
+  product_sales <- aggregate(Quantity ~ ProductName, data = merged_data_3, sum)
+  
+  best_selling_product <- product_sales[which.max(product_sales$Quantity), ]
+  
+  customer_names <- unique(merged_data_3$CustomerName[merged_data_3$ProductName == best_selling_product$ProductName])
+  
+  countries <- unique(customers$Country[customers$CustomerName %in% customer_names])
+
+  cat("該產品銷售至： ", paste(countries, collapse = ", "), "\n")
+  
+  return(countries)
+}
+result <- CountriesWhereProductSold("C:/Users/user/Documents/Xfinal/data/Northwind/OrderDetails.xlsx", "C:/Users/user/Documents/Xfinal/data/Northwind/Products.xlsx","C:/Users/user/Documents/Xfinal/data/Northwind/Orders.xlsx","C:/Users/user/Documents/Xfinal/data/Northwind/Customers.xlsx")
+```
+
+### 解題步驟(Plan)
+
+從問題一中抓出來的該商品的所有相關資料，之後再把抓出來的資料找出我們想知道的欄位(國家)即可
+
+Column {data-width=300}
+-----------------------------------------------------------------------
+
+### 準備數據(Data)
+
+```{r}
+library(DT)
+
+  CountriesWhereProductSold <- function(orderdetails_data, product_data, order_data, customers_data) {
+  
+  orderdetails <- read_excel(orderdetails_data)
+  products <- read_excel(product_data)
+  order <- read_excel(order_data)
+  customers <- read_excel(customers_data)
+  
+  orderdetail_new <- orderdetails[c("OrderID","ProductID","Quantity")]
+  product_new <- products[c("ProductID","ProductName")]
+  order_new <- order[c("OrderID","CustomerID")]
+  customers_new <- customers[c("CustomerID","Country","CustomerName")]
+  
+  merged_data_1 <- merge(orderdetail_new, product_new, by = "ProductID")
+  merged_data_2 <- merge(order_new, customers_new, by = "CustomerID")
+  merged_data_3 <- merge(merged_data_1, merged_data_2, by = "OrderID")
+  
+  return(merged_data_3)
+  }
+  result <- CountriesWhereProductSold("C:/Users/user/Documents/Xfinal/data/Northwind/OrderDetails.xlsx", "C:/Users/user/Documents/Xfinal/data/Northwind/Products.xlsx","C:/Users/user/Documents/Xfinal/data/Northwind/Orders.xlsx","C:/Users/user/Documents/Xfinal/data/Northwind/Customers.xlsx")
+  datatable(result)
+```
+
+Column {data-width=300}
+-----------------------------------------------------------------------
+
+### 該商品銷量與國家的圓餅圖
+
+```{r}
+CountriesWhereProductSold <- function(orderdetails_data, product_data, order_data, customers_data) {
+  orderdetails <- read_excel(orderdetails_data)
+  products <- read_excel(product_data)
+  order <- read_excel(order_data)
+  customers <- read_excel(customers_data)
+  
+  orderdetail_new <- orderdetails[c("OrderID","ProductID","Quantity")]
+  product_new <- products[c("ProductID","ProductName")]
+  order_new <- order[c("OrderID","CustomerID")]
+  customers_new <- customers[c("CustomerID","Country","CustomerName")]
+  
+  merged_data_1 <- merge(orderdetail_new, product_new, by = "ProductID")
+  merged_data_2 <- merge(order_new, customers_new, by = "CustomerID")
+  merged_data_3 <- merge(merged_data_1, merged_data_2, by = "OrderID")
+  
+  product_sales <- aggregate(Quantity ~ ProductName, data = merged_data_3, sum)
+  
+  best_selling_product <- product_sales[which.max(product_sales$Quantity), ]
+  
+  customer_names <- unique(merged_data_3$CustomerName[merged_data_3$ProductName == best_selling_product$ProductName])
+  
+  countries <- unique(customers$Country[customers$CustomerName %in% customer_names])
+
+  country_sales <- aggregate(Quantity ~ Country, data = merged_data_3[merged_data_3$CustomerName %in% customer_names, ], sum)
+  
+  library(ggplot2)
+  
+  # 圓餅圖
+  pie_chart <- ggplot(country_sales, aes(x = "", y = Quantity, fill = Country)) +
+    geom_bar(stat = "identity") +
+    coord_polar("y") +
+    labs(x = NULL, y = NULL, title = "該產品在各國銷售分佈") +
+    theme_void()
+  
+  return(pie_chart)
+}
+
+result <- CountriesWhereProductSold("C:/Users/user/Documents/Xfinal/data/Northwind/OrderDetails.xlsx", "C:/Users/user/Documents/Xfinal/data/Northwind/Products.xlsx","C:/Users/user/Documents/Xfinal/data/Northwind/Orders.xlsx","C:/Users/user/Documents/Xfinal/data/Northwind/Customers.xlsx")
+
+result
+
+```
+
+Column {data-width=300}
+-----------------------------------------------------------------------
+
+### 解題報告(Analysis)
+
+這一種產品曾經賣給哪幾個國家？我們先從資料集中找到我們所需的欄位，再將問題一中所找出的該商品資料集中起來，就可找出該商品出售給哪些國家，該產品銷售至：  Germany, Austria, Brazil, Ireland, Canada, USA, UK, Poland 
+
+# 研究二
+
+Column {data-width=300}
+-----------------------------------------------------------------------
+
+### 題目(Problem) 1. 哪一家廠商是大戶？？
+
+```{r}
+Largest_Manufacturer <- function(orderdetails_data, product_data, suppliers_data){
+  orderdetails <- read_excel(orderdetails_data)
+  products <- read_excel(product_data)
+  suppliers <- read_excel(suppliers_data)
+  
+  orderdetail_new <- orderdetails[c("ProductID","Quantity")]
+  product_new <- products[c("ProductID","SupplierID","Price")]
+  suppliers_new <- suppliers[c("SupplierID","SupplierName")]
+  
+  merge_data_1 <- merge(orderdetail_new,product_new, by = "ProductID")
+  merge_data_2 <- merge(merge_data_1,suppliers_new, by = "SupplierID")
+  
+  merge_data_2 <- cbind(merge_data_2, total_money = merge_data_2$Quantity*merge_data_2$Price)
+  
+  Best_Money_SupplierName <- aggregate(total_money ~ SupplierName, data = merge_data_2,sum)
+  
+  Best_SupplierName <- Best_Money_SupplierName[which.max(Best_Money_SupplierName$total_money),"SupplierName"]
+  
+  result <- Best_SupplierName
+  
+  cat("大戶廠商： ", result, "\n")
+  
+  return(result)
+}
+result <- Largest_Manufacturer("C:/Users/user/Documents/Xfinal/data/Northwind/OrderDetails.xlsx", "C:/Users/user/Documents/Xfinal/data/Northwind/Products.xlsx","C:/Users/user/Documents/Xfinal/data/Northwind/Suppliers.xlsx")
+```
+
+### 解題步驟(Plan)
+
+首先要先知道資料內哪些是我們需要的數據，找到所需數據後，將它合併起來(用merge)，再運用aggregate這個r字將其價格與數量相乘後再對於同樣的廠商名字加總起來，之後再用which.max這個r字找到最大的統計量的該名稱是誰。
+
+
+Column {data-width=300}
+-----------------------------------------------------------------------
+
+### 準備數據(Data)
+
+```{r}
+library(DT)
+
+Largest_Manufacturer <- function(orderdetails_data, product_data, suppliers_data){
+  orderdetails <- read_excel(orderdetails_data)
+  products <- read_excel(product_data)
+  suppliers <- read_excel(suppliers_data)
+  
+  orderdetail_new <- orderdetails[c("ProductID","Quantity")]
+  product_new <- products[c("ProductID","SupplierID","Price")]
+  suppliers_new <- suppliers[c("SupplierID","SupplierName")]
+  
+  merge_data_1 <- merge(orderdetail_new,product_new, by = "ProductID")
+  merge_data_2 <- merge(merge_data_1,suppliers_new, by = "SupplierID")
+  
+  merge_data_2 <- cbind(merge_data_2, total_money = merge_data_2$Quantity*merge_data_2$Price)
+  
+  return(merge_data_2)
+}
+result <- Largest_Manufacturer("C:/Users/user/Documents/Xfinal/data/Northwind/OrderDetails.xlsx", "C:/Users/user/Documents/Xfinal/data/Northwind/Products.xlsx","C:/Users/user/Documents/Xfinal/data/Northwind/Suppliers.xlsx")
+datatable(result)
+  
+```
+
+### 廠商與該總金額的長條圖
+
+```{r}
+Largest_Manufacturer <- function(orderdetails_data, product_data, suppliers_data){
+  orderdetails <- read_excel(orderdetails_data)
+  products <- read_excel(product_data)
+  suppliers <- read_excel(suppliers_data)
+  
+  orderdetail_new <- orderdetails[c("ProductID","Quantity")]
+  product_new <- products[c("ProductID","SupplierID","Price")]
+  suppliers_new <- suppliers[c("SupplierID","SupplierName")]
+  
+  merge_data_1 <- merge(orderdetail_new,product_new, by = "ProductID")
+  merge_data_2 <- merge(merge_data_1,suppliers_new, by = "SupplierID")
+  
+  merge_data_2 <- cbind(merge_data_2, total_money = merge_data_2$Quantity*merge_data_2$Price)
+  
+  Best_Money_SupplierName <- aggregate(total_money ~ SupplierName, data = merge_data_2,sum)
+  
+  Top_SupplierName <- head(Best_Money_SupplierName[order(Best_Money_SupplierName$total_money, decreasing = TRUE), ], 5)
+
+  library(ggplot2)
+
+  plot <- ggplot(Top_SupplierName, aes(x = SupplierName, y = total_money)) +
+    geom_bar(stat = "identity", fill = "orange") +
+    labs(x = "廠商名稱", y = "廠商總金額", title = "廠商總銷售分佈") +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1)) 
+  
+  return(plot)
+}
+
+result <- Largest_Manufacturer("C:/Users/user/Documents/Xfinal/data/Northwind/OrderDetails.xlsx", "C:/Users/user/Documents/Xfinal/data/Northwind/Products.xlsx","C:/Users/user/Documents/Xfinal/data/Northwind/Suppliers.xlsx")
+
+result  
+```
+
+Column {data-width=300}
+-----------------------------------------------------------------------
+
+### 解題報告(Analysis)
+
+哪一家廠商是大戶？我們先從資料集中找到我們所需的欄位，並且新增一個由數量*價錢=總金額的欄位，再將總金額給予廠商名稱的限制，就可求出該商品名稱了，而從上面的長條圖也可看出，該大戶廠商：  Aux joyeux ecclésiastiques 
+
+Column {data-width=300}
+-----------------------------------------------------------------------
+
+### 題目(Problem) 2. 這一家廠商提供哪些產品？？
+
+```{r}
+Largest_Manufacturer_Products <- function(orderdetails_data, product_data, suppliers_data){
+  orderdetails <- read_excel(orderdetails_data)
+  products <- read_excel(product_data)
+  suppliers <- read_excel(suppliers_data)
+  
+  orderdetail_new <- orderdetails[c("ProductID","Quantity")]
+  product_new <- products[c("ProductID","SupplierID","ProductName","Price")]
+  suppliers_new <- suppliers[c("SupplierID","SupplierName")]
+  
+  merge_data_1 <- merge(orderdetails,products, by = "ProductID")
+  merge_data_2 <- merge(merge_data_1,suppliers, by = "SupplierID")
+  
+  merge_data_2 <- cbind(merge_data_2, total_money = merge_data_2$Quantity*merge_data_2$Price)
+  
+  Best_Money_SupplierName <- aggregate(total_money ~ SupplierName, data = merge_data_2,sum)
+  
+  Best_SupplierName <- Best_Money_SupplierName[which.max(Best_Money_SupplierName$total_money),"SupplierName"]
+  
+  Best_SupplierName_Data <- merge_data_2[merge_data_2$SupplierName == Best_SupplierName, ]
+  #特別把大戶廠商抓出來，以便後續的運算
+  
+  Best_SupplierName_Product <- unique(Best_SupplierName_Data$ProductName)
+  #為了不要讓產品名重複，加上unique的r字
+  
+  cat("大戶廠商所販賣商品： ", paste(Best_SupplierName_Product, collapse = ", "), "\n")
+  
+  return(Best_SupplierName_Product)
+}
+result <- Largest_Manufacturer_Products("C:/Users/user/Documents/Xfinal/data/Northwind/OrderDetails.xlsx", "C:/Users/user/Documents/Xfinal/data/Northwind/Products.xlsx","C:/Users/user/Documents/Xfinal/data/Northwind/Suppliers.xlsx")
+```
+
+### 解題步驟(Plan)
+
+問題一中，我們已經找出大戶廠商，再來就把大戶廠商的資料從資料庫裡面抓出來，之後再把抓出來的資料找出我們想知道的欄位(商品名稱)，記得用上unique這個r字，不然商品名稱會重疊。這樣就可以跑出我們想知道的資料了。
+
+
+Column {data-width=300}
+-----------------------------------------------------------------------
+
+### 準備數據(Data)
+
+```{r}
+library(DT)
+
+Largest_Manufacturer_Products <- function(orderdetails_data, product_data, suppliers_data){
+  orderdetails <- read_excel(orderdetails_data)
+  products <- read_excel(product_data)
+  suppliers <- read_excel(suppliers_data)
+  
+  orderdetail_new <- orderdetails[c("ProductID","Quantity")]
+  product_new <- products[c("ProductID","SupplierID","ProductName","Price")]
+  suppliers_new <- suppliers[c("SupplierID","SupplierName")]
+  
+  merge_data_1 <- merge(orderdetail_new,product_new, by = "ProductID")
+  merge_data_2 <- merge(merge_data_1,suppliers_new, by = "SupplierID")
+  
+  merge_data_2 <- cbind(merge_data_2, total_money = merge_data_2$Quantity*merge_data_2$Price)
+  
+  return(merge_data_2)
+}
+result <- Largest_Manufacturer_Products("C:/Users/user/Documents/Xfinal/data/Northwind/OrderDetails.xlsx", "C:/Users/user/Documents/Xfinal/data/Northwind/Products.xlsx","C:/Users/user/Documents/Xfinal/data/Northwind/Suppliers.xlsx")
+datatable(result)
+```
+
+Column {data-width=300}
+-----------------------------------------------------------------------
+
+### 解題報告(Analysis)
+
+這一家廠商提供哪些產品？我們先從資料集中找到我們所需的欄位，將問題一所找出的廠商名稱的資料集中，就可求出該廠商出售的商品名稱了，該大戶廠商所販賣商品：  Chartreuse verte, Côte de Blaye
+
+Column {data-width=300}
+-----------------------------------------------------------------------
+
+### 題目(Problem) 3. 這一家廠商的哪一件產品最賣？？
+
+```{r}
+Largest_Manufacturer_Product_Sell_Best <- function(orderdetails_data, product_data, suppliers_data){
+  orderdetails <- read_excel(orderdetails_data)
+  products <- read_excel(product_data)
+  suppliers <- read_excel(suppliers_data)
+  
+  orderdetail_new <- orderdetails[c("ProductID","Quantity")]
+  product_new <- products[c("ProductID","SupplierID","ProductName","Price")]
+  suppliers_new <- suppliers[c("SupplierID","SupplierName")]
+  
+  merge_data_1 <- merge(orderdetail_new,product_new, by = "ProductID")
+  merge_data_2 <- merge(merge_data_1,suppliers_new, by = "SupplierID")
+  
+  merge_data_2 <- cbind(merge_data_2, total_money = merge_data_2$Quantity*merge_data_2$Price)
+  
+  Best_Money_SupplierName <- aggregate(total_money ~ SupplierName, data = merge_data_2,sum)
+  
+  Best_SupplierName <- Best_Money_SupplierName[which.max(Best_Money_SupplierName$total_money),"SupplierName"]
+  
+  Best_SupplierName_Data <- merge_data_2[merge_data_2$SupplierName == Best_SupplierName, ]
+  
+  Best_SupplierName_Product <- unique(Best_SupplierName_Data$ProductName)
+  
+  Product_Sales <- aggregate(Quantity ~ ProductName, data = Best_SupplierName_Data, sum)
+  
+  Best_Selling_Product <- Product_Sales[which.max(Product_Sales$Quantity), "ProductName"]
+  
+  cat("大戶廠商賣最好的產品： ", Best_Selling_Product, "\n")
+  
+  return(Best_Selling_Product)
+}
+result <- Largest_Manufacturer_Product_Sell_Best("C:/Users/user/Documents/Xfinal/data/Northwind/OrderDetails.xlsx", "C:/Users/user/Documents/Xfinal/data/Northwind/Products.xlsx","C:/Users/user/Documents/Xfinal/data/Northwind/Suppliers.xlsx")
+```
+
+### 解題步驟(Plan)
+
+從問題二中抓出來的大戶廠商的所有相關資料，將數量依商品名稱做區別來作加總，再運用which.max找出數量最多的商品名稱即可
+
+
+Column {data-width=300}
+-----------------------------------------------------------------------
+
+### 準備數據(Data)
+
+```{r}
+library(DT)
+
+Largest_Manufacturer_Product_Sell_Best <- function(orderdetails_data, product_data, suppliers_data){
+  orderdetails <- read_excel(orderdetails_data)
+  products <- read_excel(product_data)
+  suppliers <- read_excel(suppliers_data)
+  
+  orderdetail_new <- orderdetails[c("ProductID","Quantity")]
+  product_new <- products[c("ProductID","SupplierID","ProductName","Price")]
+  suppliers_new <- suppliers[c("SupplierID","SupplierName")]
+  
+  merge_data_1 <- merge(orderdetail_new,product_new, by = "ProductID")
+  merge_data_2 <- merge(merge_data_1,suppliers_new, by = "SupplierID")
+  
+  merge_data_2 <- cbind(merge_data_2, total_money = merge_data_2$Quantity*merge_data_2$Price)
+  
+  Best_Money_SupplierName <- aggregate(total_money ~ SupplierName, data = merge_data_2,sum)
+  
+  Best_SupplierName <- Best_Money_SupplierName[which.max(Best_Money_SupplierName$total_money),"SupplierName"]
+  
+  Best_SupplierName_Data <- merge_data_2[merge_data_2$SupplierName == Best_SupplierName, ]
+  
+  return(Best_SupplierName_Data)
+}
+result <- Largest_Manufacturer_Product_Sell_Best("C:/Users/user/Documents/Xfinal/data/Northwind/OrderDetails.xlsx", "C:/Users/user/Documents/Xfinal/data/Northwind/Products.xlsx","C:/Users/user/Documents/Xfinal/data/Northwind/Suppliers.xlsx")
+datatable(result)
+```
+
+### 該廠商所販賣的商品與商品總金額的圓餅圖
+
+```{r}
+Largest_Manufacturer <- function(orderdetails_data, product_data, suppliers_data){
+  orderdetails <- read_excel(orderdetails_data)
+  products <- read_excel(product_data)
+  suppliers <- read_excel(suppliers_data)
+  
+  orderdetail_new <- orderdetails[c("ProductID","Quantity")]
+  product_new <- products[c("ProductID","SupplierID","ProductName","Price")]
+  suppliers_new <- suppliers[c("SupplierID","SupplierName")]
+  
+  merge_data_1 <- merge(orderdetail_new,product_new, by = "ProductID")
+  merge_data_2 <- merge(merge_data_1,suppliers_new, by = "SupplierID")
+  
+  merge_data_2 <- cbind(merge_data_2, total_money = merge_data_2$Quantity*merge_data_2$Price)
+  
+  Best_Money_SupplierName <- aggregate(total_money ~ SupplierName, data = merge_data_2,sum)
+  
+  Best_SupplierName <- Best_Money_SupplierName[which.max(Best_Money_SupplierName$total_money),"SupplierName"]
+  
+  Best_SupplierName_Data <- merge_data_2[merge_data_2$SupplierName == Best_SupplierName, ]
+  
+  Best_SupplierName_Product <- unique(Best_SupplierName_Data$ProductName)
+  
+  Product_Sales <- aggregate(Quantity ~ ProductName, data = Best_SupplierName_Data, sum)
+
+  library(ggplot2)
+
+  pie_chart <- ggplot(Product_Sales, aes(x = "", y = Quantity, fill = ProductName)) +
+    geom_bar(stat = "identity") +
+    coord_polar("y") +
+    labs(x = NULL, y = NULL, title = "廠商產品銷售分布") +
+    theme_void()
+  
+  return(pie_chart) 
+}
+
+result <- Largest_Manufacturer("C:/Users/user/Documents/Xfinal/data/Northwind/OrderDetails.xlsx", "C:/Users/user/Documents/Xfinal/data/Northwind/Products.xlsx","C:/Users/user/Documents/Xfinal/data/Northwind/Suppliers.xlsx")
+
+result  
+```
+
+Column {data-width=300}
+-----------------------------------------------------------------------
+
+### 解題報告(Analysis)
+
+這一家廠商的哪一件產品最賣？我們先從資料集中找到我們所需的欄位，將問題二所找出的商品名稱的資料集中，就可求出哪個商品銷售量較高，從圓餅圖也能觀察到，該大戶廠商賣最好的產品：  Chartreuse verte 
+
+
+# 研究三
+
+Column {data-width=300}
+-----------------------------------------------------------------------
+
+### 題目(Problem) 1. 哪一天的金額最多？？
+
+```{r}
+day_of_most_money <- function(orders_data, product_data, orderdetails_data){
+  orders <- read_excel(orders_data)
+  products <- read_excel(product_data)
+  orderdetails <- read_excel(orderdetails_data)
+  
+  orderdetail_new <- orderdetails[c("OrderID","ProductID","Quantity")]
+  product_new <- products[c("ProductID","Price")]
+  order_new <- orders[c("OrderID","OrderDate")]
+  
+  merge_data_1 <- merge(orderdetail_new,product_new, by = "ProductID")
+  merge_data_2 <- merge(merge_data_1,order_new, by = "OrderID")
+  
+  merge_data_2 <- cbind(merge_data_2, total_money = merge_data_2$Quantity*merge_data_2$Price)
+  
+  day_summary <- aggregate(total_money ~ OrderDate, data = merge_data_2, sum)
+  largest_day_row <- day_summary[which.max(day_summary$total_money), ]
+  largest_day <- largest_day_row$OrderDate
+  formatted_date <- format(largest_day, "%Y-%m-%d")
+  
+  cat("金額最多的一天： ", formatted_date, "\n")
+  
+  return(formatted_date)
+}
+result <- day_of_most_money("C:/Users/user/Documents/Xfinal/data/Northwind/Orders.xlsx","C:/Users/user/Documents/Xfinal/data/Northwind/Products.xlsx","C:/Users/user/Documents/Xfinal/data/Northwind/OrderDetails.xlsx")
+
+```
+
+### 解題步驟(Plan)
+
+首先要先知道資料內哪些是我們需要的數據，找到所需數據後，將它合併起來(用merge)，再運用aggregate這個r字將其價格與數量相乘後再對於同樣的日期加總起來，之後再用which.max這個r字找到最大的統計量的該日期是多少，但要注意的是日期格式會跑掉所以還要用format這個r字來固定日期的模板。
+
+
+Column {data-width=300}
+-----------------------------------------------------------------------
+
+### 準備數據(Data)
+
+```{r}
+library(DT)
+
+data_1 <- function(orders_data, product_data, orderdetails_data){
+  orders <- read_excel(orders_data)
+  products <- read_excel(product_data)
+  orderdetails <- read_excel(orderdetails_data)
+  
+  orderdetail_new <- orderdetails[c("OrderID","ProductID","Quantity")]
+  product_new <- products[c("ProductID","Price")]
+  order_new <- orders[c("OrderID","OrderDate")]
+  
+  merge_data_1 <- merge(orderdetail_new,product_new, by = "ProductID")
+  merge_data_2 <- merge(merge_data_1,order_new, by = "OrderID")
+  
+  merge_data_2 <- cbind(merge_data_2, total_money = merge_data_2$Quantity*merge_data_2$Price)
+  
+  return(merge_data_2)
+}
+result <- data_1("C:/Users/user/Documents/Xfinal/data/Northwind/Orders.xlsx","C:/Users/user/Documents/Xfinal/data/Northwind/Products.xlsx","C:/Users/user/Documents/Xfinal/data/Northwind/OrderDetails.xlsx")
+
+datatable(result)
+  
+```
+
+### 金錢走向圖
+
+```{r}
+day_of_most_money <- function(orders_data, product_data, orderdetails_data){
+  orders <- read_excel(orders_data)
+  products <- read_excel(product_data)
+  orderdetails <- read_excel(orderdetails_data)
+  
+  orderdetail_new <- orderdetails[c("OrderID","ProductID","Quantity")]
+  product_new <- products[c("ProductID","Price")]
+  order_new <- orders[c("OrderID","OrderDate")]
+  
+  merge_data_1 <- merge(orderdetail_new,product_new, by = "ProductID")
+  merge_data_2 <- merge(merge_data_1,order_new, by = "OrderID")
+  
+  merge_data_2 <- cbind(merge_data_2, total_money = merge_data_2$Quantity*merge_data_2$Price)
+  
+  day_summary <- aggregate(total_money ~ OrderDate, data = merge_data_2, sum)
+  
+  library(ggplot2)
+
+  day_summary$OrderDate <- as.Date(day_summary$OrderDate)
+
+  plot <- ggplot(day_summary, aes(x = OrderDate, y = total_money)) + 
+  geom_line(color = "red") + 
+  labs(x = "日期", y = "銷售額", title = "銷售額隨時間的變化") +
+  theme(panel.background = element_rect(fill = "gray"))
+
+  return(plot)
+}
+
+result <- day_of_most_money("C:/Users/user/Documents/Xfinal/data/Northwind/Orders.xlsx","C:/Users/user/Documents/Xfinal/data/Northwind/Products.xlsx","C:/Users/user/Documents/Xfinal/data/Northwind/OrderDetails.xlsx")
+
+result  
+```
+
+Column {data-width=300}
+-----------------------------------------------------------------------
+
+### 解題報告(Analysis)
+
+哪一天的金額最多？我們透過依日期的不同把價錢與數量的乘積總合起來，並且找到最大的金額是在哪個日期，而結果是1997-01-23，從金錢走向圖來看也大致落在一月附近也可間接證明這答案的可信度。
+
+Column {data-width=300}
+-----------------------------------------------------------------------
+
+### 題目(Problem) 2. 這一天的金額是多少？？
+
+```{r}
+the_day_of_most_money <- function(orders_data, product_data, orderdetails_data){
+  orders <- read_excel(orders_data)
+  products <- read_excel(product_data)
+  orderdetails <- read_excel(orderdetails_data)
+  
+  orderdetail_new <- orderdetails[c("OrderID","ProductID","Quantity")]
+  product_new <- products[c("ProductID","Price")]
+  order_new <- orders[c("OrderID","OrderDate")]
+  
+  merge_data_1 <- merge(orderdetail_new,product_new, by = "ProductID")
+  merge_data_2 <- merge(merge_data_1,order_new, by = "OrderID")
+  
+  merge_data_2 <- cbind(merge_data_2, total_money = merge_data_2$Quantity*merge_data_2$Price)
+  
+  day_summary <- aggregate(total_money ~ OrderDate, data = merge_data_2, sum)
+  largest_day <- day_summary[which.max(day_summary$total_money), "OrderDate"]
+  largest_day_data <- merge_data_2[merge_data_2$OrderDate == largest_day, ]
+  largest_day_money <- aggregate(total_money ~ OrderDate, data = largest_day_data, sum)
+  
+  cat("該天金額是： ", largest_day_money$total_money, "\n")
+  
+  return(largest_day_money$total_money)
+}
+result <- the_day_of_most_money("C:/Users/user/Documents/Xfinal/data/Northwind/Orders.xlsx","C:/Users/user/Documents/Xfinal/data/Northwind/Products.xlsx","C:/Users/user/Documents/Xfinal/data/Northwind/OrderDetails.xlsx")
+
+```
+
+### 解題步驟(Plan)
+
+從問題一中抓出來有關金額最多的一天的所有相關資料，運用aggregate這個r字把數量乘以價錢全部加總起來，就可以知道該天的總金額是多少了
+
+
+Column {data-width=300}
+-----------------------------------------------------------------------
+
+### 準備數據(Data)
+
+```{r}
+library(DT)
+
+the_day_of_most_money <- function(orders_data, product_data, orderdetails_data){
+  orders <- read_excel(orders_data)
+  products <- read_excel(product_data)
+  orderdetails <- read_excel(orderdetails_data)
+  
+  orderdetail_new <- orderdetails[c("OrderID","ProductID","Quantity")]
+  product_new <- products[c("ProductID","Price")]
+  order_new <- orders[c("OrderID","OrderDate")]
+  
+  merge_data_1 <- merge(orderdetail_new,product_new, by = "ProductID")
+  merge_data_2 <- merge(merge_data_1,order_new, by = "OrderID")
+  
+  merge_data_2 <- cbind(merge_data_2, total_money = merge_data_2$Quantity*merge_data_2$Price)
+  
+  day_summary <- aggregate(total_money ~ OrderDate, data = merge_data_2, sum)
+  largest_day <- day_summary[which.max(day_summary$total_money), "OrderDate"]
+  largest_day_data <- merge_data_2[merge_data_2$OrderDate == largest_day, ]
+  
+  return(largest_day_data)
+}
+result <- the_day_of_most_money("C:/Users/user/Documents/Xfinal/data/Northwind/Orders.xlsx","C:/Users/user/Documents/Xfinal/data/Northwind/Products.xlsx","C:/Users/user/Documents/Xfinal/data/Northwind/OrderDetails.xlsx")
+
+datatable(result)
+  
+```
+
+Column {data-width=300}
+-----------------------------------------------------------------------
+
+### 解題報告(Analysis)
+
+這一天的金額是多少？我們從問題一中已經找到1997-01-23的數據，接下來只要把該天的金額給算出來就可以了，而結果是
+15641.5。 
+
+Column {data-width=300}
+-----------------------------------------------------------------------
+
+### 題目(Problem) 3. 這一天交易了哪一些產品？？
+
+```{r}
+trading_products_on_this_day <- function(orders_data, product_data, orderdetails_data){
+  orders <- read_excel(orders_data)
+  products <- read_excel(product_data)
+  orderdetails <- read_excel(orderdetails_data)
+  
+  orderdetail_new <- orderdetails[c("OrderID","ProductID","Quantity")]
+  product_new <- products[c("ProductID","ProductName","Price")]
+  order_new <- orders[c("OrderID","OrderDate")]
+  
+  merge_data_1 <- merge(orderdetail_new,product_new, by = "ProductID")
+  merge_data_2 <- merge(merge_data_1,order_new, by = "OrderID")
+  
+  merge_data_2 <- cbind(merge_data_2, total_money = merge_data_2$Quantity*merge_data_2$Price)
+  
+  day_summary <- aggregate(total_money ~ OrderDate, data = merge_data_2, sum)
+  largest_day <- day_summary[which.max(day_summary$total_money), "OrderDate"]
+  largest_day_data <- merge_data_2[merge_data_2$OrderDate == largest_day, ]
+  largest_day_of_products <- unique(largest_day_data$ProductName)
+  
+  cat("這一天交易的產品： ", paste(largest_day_of_products, collapse = ", "), "\n")
+  
+  return(largest_day_of_products)
+}
+result <- trading_products_on_this_day("C:/Users/user/Documents/Xfinal/data/Northwind/Orders.xlsx","C:/Users/user/Documents/Xfinal/data/Northwind/Products.xlsx","C:/Users/user/Documents/Xfinal/data/Northwind/OrderDetails.xlsx")
+```
+
+### 解題步驟(Plan)
+
+問題一中，我們已經找出哪一天的金額最多，再來就把該天的資料從資料庫裡面抓出來，之後再把抓出來的資料中找出我們想知道的欄位(商品名稱)，記得用上unique這個r字，不然商品名稱會重疊。這樣就可以跑出我們想知道的資料了。
+
+
+Column {data-width=300}
+-----------------------------------------------------------------------
+
+### 準備數據(Data)
+
+```{r}
+library(DT)
+
+the_day_of_most_money <- function(orders_data, product_data, orderdetails_data){
+  orders <- read_excel(orders_data)
+  products <- read_excel(product_data)
+  orderdetails <- read_excel(orderdetails_data)
+  
+  orderdetail_new <- orderdetails[c("OrderID","ProductID","Quantity")]
+  product_new <- products[c("ProductID","ProductName","Price")]
+  order_new <- orders[c("OrderID","OrderDate")]
+  
+  merge_data_1 <- merge(orderdetail_new,product_new, by = "ProductID")
+  merge_data_2 <- merge(merge_data_1,order_new, by = "OrderID")
+  
+  merge_data_2 <- cbind(merge_data_2, total_money = merge_data_2$Quantity*merge_data_2$Price)
+  
+  day_summary <- aggregate(total_money ~ OrderDate, data = merge_data_2, sum)
+  largest_day <- day_summary[which.max(day_summary$total_money), "OrderDate"]
+  largest_day_data <- merge_data_2[merge_data_2$OrderDate == largest_day, ]
+  
+  return(largest_day_data)
+}
+result <- the_day_of_most_money("C:/Users/user/Documents/Xfinal/data/Northwind/Orders.xlsx","C:/Users/user/Documents/Xfinal/data/Northwind/Products.xlsx","C:/Users/user/Documents/Xfinal/data/Northwind/OrderDetails.xlsx")
+
+datatable(result)
+
+```
+
+### 該天商品銷售的長條圖
+
+```{r}
+trading_products_on_this_day <- function(orders_data, product_data, orderdetails_data){
+  orders <- read_excel(orders_data)
+  products <- read_excel(product_data)
+  orderdetails <- read_excel(orderdetails_data)
+  
+  orderdetail_new <- orderdetails[c("OrderID","ProductID","Quantity")]
+  product_new <- products[c("ProductID","ProductName","Price")]
+  order_new <- orders[c("OrderID","OrderDate")]
+  
+  merge_data_1 <- merge(orderdetail_new,product_new, by = "ProductID")
+  merge_data_2 <- merge(merge_data_1,order_new, by = "OrderID")
+  
+  merge_data_2 <- cbind(merge_data_2, total_money = merge_data_2$Quantity*merge_data_2$Price)
+  
+  day_summary <- aggregate(total_money ~ OrderDate, data = merge_data_2, sum)
+  largest_day <- day_summary[which.max(day_summary$total_money), "OrderDate"]
+  largest_day_data <- merge_data_2[merge_data_2$OrderDate == largest_day, ]
+  largest_day_of_products <- unique(largest_day_data$ProductName)
+
+  product_sales <- aggregate(total_money ~ ProductName, data = largest_day_data, sum)
+
+  library(ggplot2)
+
+  plot <- ggplot(product_sales, aes(x = ProductName, y = total_money)) +
+    geom_bar(stat = "identity", fill = "skyblue") +
+    labs(x = "產品名稱", y = "總金額", title = "產品總金額分佈") +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1)) 
+  
+  return(plot)
+}
+
+result <- trading_products_on_this_day("C:/Users/user/Documents/Xfinal/data/Northwind/Orders.xlsx","C:/Users/user/Documents/Xfinal/data/Northwind/Products.xlsx","C:/Users/user/Documents/Xfinal/data/Northwind/OrderDetails.xlsx")
+
+result  
+```
+
+Column {data-width=300}
+-----------------------------------------------------------------------
+
+### 解題報告(Analysis)
+
+這一天交易了哪一些產品？我們用1997-01-23的數據，然後再用產品名稱的限制，就可以知道該商品名稱了，而結果是
+Raclette_Courdavault、Gorgonzola_Telino、Scottish_Longbreads、Côte_de_Blaye跟Steeleye_Stout
+
+
+# 結論(Conclusion)
+
+Column {data-width=300}
+-----------------------------------------------------------------------
+
+
+### 結論
+
+在過程中我們可以發現，雖然問題不同但其實程式碼都大概使用那些相同的r字，例如:aggregate、which.max等等，而每次都一定要先整理資料後，再依照問題的需求來去找出對應的答案，雖然過程中可能有些答案會造成結果跑不出來，但只要去限制他的格式，其實大部分的答案都能跑得出來，尤其在師長給的題目中每個題目都有連貫性，慢慢地順著問題一問題二等等的做，其實都可以很順利地跑出來。
